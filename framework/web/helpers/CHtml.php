@@ -258,7 +258,7 @@ class CHtml
 	{
 		$content="$seconds";
 		if($url!=='')
-			$content.=';'.self::normalizeUrl($url);
+			$content.=';url='.self::normalizeUrl($url);
 		Yii::app()->clientScript->registerMetaTag($content,null,'refresh');
 	}
 
@@ -454,7 +454,7 @@ class CHtml
 		}
 		if(!isset($htmlOptions['type']))
 			$htmlOptions['type']='button';
-		if(!isset($htmlOptions['value']))
+		if(!isset($htmlOptions['value']) && $htmlOptions['type']!='image')
 			$htmlOptions['value']=$label;
 		self::clientChange('click',$htmlOptions);
 		return self::tag('input',$htmlOptions);
@@ -920,7 +920,7 @@ class CHtml
 		$options="\n".self::listOptions($select,$data,$htmlOptions);
 		$hidden='';
 
-		if(isset($htmlOptions['multiple']))
+		if(!empty($htmlOptions['multiple']))
 		{
 			if(substr($htmlOptions['name'],-2)!=='[]')
 				$htmlOptions['name'].='[]';
@@ -973,7 +973,7 @@ class CHtml
 	{
 		if(!isset($htmlOptions['size']))
 			$htmlOptions['size']=4;
-		if(isset($htmlOptions['multiple']))
+		if(!empty($htmlOptions['multiple']))
 		{
 			if(substr($name,-2)!=='[]')
 				$name.='[]';
@@ -996,7 +996,9 @@ class CHtml
 	 * <ul>
 	 * <li>template: string, specifies how each checkbox is rendered. Defaults
 	 * to "{input} {label}", where "{input}" will be replaced by the generated
-	 * check box input tag while "{label}" be replaced by the corresponding check box label.</li>
+	 * check box input tag while "{label}" be replaced by the corresponding check box label,
+	 * {beginLabel} will be replaced by &lt;label&gt; with labelOptions, {labelTitle} will be replaced
+	 * by the corresponding check box label title and {endLabel} will be replaced by &lt;/label&gt;</li>
 	 * <li>separator: string, specifies the string that separates the generated check boxes.</li>
 	 * <li>checkAll: string, specifies the label for the "check all" checkbox.
 	 * If this option is specified, a 'check all' checkbox will be displayed. Clicking on
@@ -1040,15 +1042,23 @@ class CHtml
 		$id=0;
 		$checkAll=true;
 
-		foreach($data as $value=>$label)
+		foreach($data as $value=>$labelTitle)
 		{
 			$checked=!is_array($select) && !strcmp($value,$select) || is_array($select) && in_array($value,$select);
 			$checkAll=$checkAll && $checked;
 			$htmlOptions['value']=$value;
 			$htmlOptions['id']=$baseID.'_'.$id++;
 			$option=self::checkBox($name,$checked,$htmlOptions);
-			$label=self::label($label,$htmlOptions['id'],$labelOptions);
-			$items[]=strtr($template,array('{input}'=>$option,'{label}'=>$label));
+			$beginLabel=self::openTag('label',$labelOptions);
+			$label=self::label($labelTitle,$htmlOptions['id'],$labelOptions);
+			$endLabel=self::closeTag('label');
+			$items[]=strtr($template,array(
+				'{input}'=>$option,
+				'{beginLabel}'=>$beginLabel,
+				'{label}'=>$label,
+				'{labelTitle}'=>$labelTitle,
+				'{endLabel}'=>$endLabel,
+			));
 		}
 
 		if(isset($checkAllLabel))
@@ -1056,8 +1066,16 @@ class CHtml
 			$htmlOptions['value']=1;
 			$htmlOptions['id']=$id=$baseID.'_all';
 			$option=self::checkBox($id,$checkAll,$htmlOptions);
+			$beginLabel=self::openTag('label',$labelOptions);
 			$label=self::label($checkAllLabel,$id,$labelOptions);
-			$item=strtr($template,array('{input}'=>$option,'{label}'=>$label));
+			$endLabel=self::closeTag('label');
+			$item=strtr($template,array(
+				'{input}'=>$option,
+				'{beginLabel}'=>$beginLabel,
+				'{label}'=>$label,
+				'{labelTitle}'=>$checkAllLabel,
+				'{endLabel}'=>$endLabel,
+			));
 			if($checkAllLast)
 				$items[]=$item;
 			else
@@ -1097,7 +1115,9 @@ EOD;
 	 * <ul>
 	 * <li>template: string, specifies how each radio button is rendered. Defaults
 	 * to "{input} {label}", where "{input}" will be replaced by the generated
-	 * radio button input tag while "{label}" will be replaced by the corresponding radio button label.</li>
+	 * radio button input tag while "{label}" will be replaced by the corresponding radio button label,
+	 * {beginLabel} will be replaced by &lt;label&gt; with labelOptions, {labelTitle} will be replaced
+	 * by the corresponding radio button label title and {endLabel} will be replaced by &lt;/label&gt;</li>
 	 * <li>separator: string, specifies the string that separates the generated radio buttons. Defaults to new line (<br/>).</li>
 	 * <li>labelOptions: array, specifies the additional HTML attributes to be rendered
 	 * for every label tag in the list.</li>
@@ -1134,14 +1154,22 @@ EOD;
 		$baseID=isset($htmlOptions['baseID']) ? $htmlOptions['baseID'] : self::getIdByName($name);
 		unset($htmlOptions['baseID']);
 		$id=0;
-		foreach($data as $value=>$label)
+		foreach($data as $value=>$labelTitle)
 		{
 			$checked=!strcmp($value,$select);
 			$htmlOptions['value']=$value;
 			$htmlOptions['id']=$baseID.'_'.$id++;
 			$option=self::radioButton($name,$checked,$htmlOptions);
-			$label=self::label($label,$htmlOptions['id'],$labelOptions);
-			$items[]=strtr($template,array('{input}'=>$option,'{label}'=>$label));
+			$beginLabel=self::openTag('label',$labelOptions);
+			$label=self::label($labelTitle,$htmlOptions['id'],$labelOptions);
+			$endLabel=self::closeTag('label');
+			$items[]=strtr($template,array(
+				'{input}'=>$option,
+				'{beginLabel}'=>$beginLabel,
+				'{label}'=>$label,
+				'{labelTitle}'=>$labelTitle,
+				'{endLabel}'=>$endLabel,
+			));
 		}
 		if(empty($container))
 			return implode($separator,$items);
@@ -1772,7 +1800,7 @@ EOD;
 			self::addErrorCss($htmlOptions);
 
 		$hidden='';
-		if(isset($htmlOptions['multiple']))
+		if(!empty($htmlOptions['multiple']))
 		{
 			if(substr($htmlOptions['name'],-2)!=='[]')
 				$htmlOptions['name'].='[]';
